@@ -4,9 +4,9 @@ name: CI-CD
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: ["*"]   # toutes les branches
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]   # uniquement PR vers main
   schedule:
     - cron: "15 11 * * 1-5"
 

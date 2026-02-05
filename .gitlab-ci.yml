@@ -1,5 +1,3 @@
-# Project 4 GitLab CI pipeline
-
 stages:
   - build
   - test
@@ -7,11 +5,10 @@ stages:
   - release
   - maintenance
 
-# Configurations par défaut
 default:
   interruptible: true
   retry: 1
-  image: maven:3.9-eclipse-temurin-17  # Maven + Java 17
+  image: maven:3.9-eclipse-temurin-17
   before_script:
     - echo "Starting job $CI_JOB_NAME"
 
@@ -21,7 +18,8 @@ build:
   script:
     - mvn -B package
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "push"         # toutes les branches
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
 # Cucumber Tests
 cucumber:
@@ -31,7 +29,8 @@ cucumber:
     - mvn -B test -Dcucumber.options="--plugin json:target/cucumber.json"
   allow_failure: false
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
 # Newman Tests
 newman:
@@ -41,14 +40,16 @@ newman:
     - newman run tests/postman_collection.json
   allow_failure: false
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
 # Deploy DEV
 deploy_dev:
   stage: deploy
   needs: ["build", "cucumber", "newman"]
-  only:
-    - develop
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+
   script:
     - ./scripts/deploy-dev.sh
 
@@ -56,25 +57,25 @@ deploy_dev:
 deploy_qa:
   stage: deploy
   needs: ["build", "cucumber", "newman"]
-  only:
-    - main
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
   script:
     - ./scripts/deploy-qa.sh
 
 # Release
 release:
   stage: release
-  only:
-    - main
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
   script:
     - mvn versions:set -DnewVersion=$(date +%Y.%m.%d)
     - git tag v$(date +%Y.%m.%d)
     - git push origin --tags
 
-# Maintenance (scheduled)
+# Maintenance
 maintenance:
   stage: maintenance
-  only:
-    - schedules
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
   script:
     - ./scripts/cleanup.sh
