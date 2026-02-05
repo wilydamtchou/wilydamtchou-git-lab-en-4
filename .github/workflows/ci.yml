@@ -51,17 +51,6 @@ jobs:
       - name: Deploy to DEV
         run: ./scripts/deploy-dev.sh
 
-  deploy_qa:
-    runs-on: ubuntu-latest
-    needs: [ build, cucumber, newman ] # ✅ dépend obligatoirement des tous les tests
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: QA
-      url: https://qa.example.com
-    steps:
-      - uses: actions/checkout@v4
-      - run: ./scripts/deploy-qa.sh
-
   release:
     runs-on: ubuntu-latest
     needs: build
