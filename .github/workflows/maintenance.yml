@@ -1,0 +1,14 @@
+name: Maintenance
+
+on:
+  schedule:
+    - cron: "15 11 * * 1-5"  # exécute du lundi au vendredi à 11:15 UTC
+  workflow_dispatch:         # possibilité de lancer manuellement
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cleanup
+        run: ./scripts/cleanup.sh

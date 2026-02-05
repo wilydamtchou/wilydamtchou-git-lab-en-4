@@ -3,6 +3,10 @@ name: Deploy QA
 on:
   workflow_dispatch:  # déclenchement manuel
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy_qa:
     runs-on: ubuntu-latest

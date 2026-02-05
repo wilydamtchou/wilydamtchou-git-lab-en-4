@@ -1,0 +1,22 @@
+name: Release
+
+on:
+  workflow_dispatch:  # déclenchement manuel
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Version
+        run: mvn versions:set -DnewVersion=$(date +%Y.%m.%d)
+      - name: Tag & Push
+        run: |
+          git tag v$(date +%Y.%m.%d)
+          git push origin --tags
