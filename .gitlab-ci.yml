@@ -2,63 +2,80 @@ stages:
   - build
   - test
   - deploy
+  - release
   - maintenance
 
 default:
   interruptible: true
   retry: 1
-  allow_failure: false
+  image: maven:3.9-eclipse-temurin-17
+  before_script:
+    - echo "Starting job $CI_JOB_NAME"
 
+# Build
 build:
   stage: build
   script:
     - mvn -B package
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "push"         # toutes les branches
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
+# Cucumber Tests
 cucumber:
   stage: test
   needs: ["build"]
   script:
     - mvn -B test -Dcucumber.options="--plugin json:target/cucumber.json"
+  allow_failure: false
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
+# Newman Tests
 newman:
   stage: test
   needs: ["build"]
   script:
     - newman run tests/postman_collection.json
+  allow_failure: false
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
+# Deploy DEV
 deploy_dev:
   stage: deploy
   needs: ["build", "cucumber", "newman"]
-  only:
-    - develop
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+
   script:
     - ./scripts/deploy-dev.sh
 
+# Deploy QA
 deploy_qa:
   stage: deploy
   needs: ["build", "cucumber", "newman"]
-  only:
-    - main
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
   script:
     - ./scripts/deploy-qa.sh
 
+# Release
 release:
   stage: release
-  only:
-    - main
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
   script:
     - mvn versions:set -DnewVersion=$(date +%Y.%m.%d)
     - git tag v$(date +%Y.%m.%d)
+    - git push origin --tags
 
+# Maintenance
 maintenance:
   stage: maintenance
-  only:
-    - schedules
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
   script:
     - ./scripts/cleanup.sh
