@@ -3,11 +3,6 @@ Gitflows: Github, Gitlab
 
 Lab 4: Advanced Merges & Professional CI/CD (GitHub Actions & GitLab CI)
 
-Cloud Computing Professional License
-University of the Mountains
-
-By Engineer Willy Damtchou
-December 2025
 General objective
 Build a complete and professional CI/CD pipeline for a Spring Boot project, while mastering advanced merges, professional PR/MR, quality, security, advanced testing and multi-environment deployment.
 
