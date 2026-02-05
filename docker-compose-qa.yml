@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  demo-pipeline-qa:
+    image: demo-pipeline:latest
+    container_name: demo-pipeline-qa
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: qa
+      APP_ENV: QA
+    ports:
+      - "8082:8080"
+    networks:
+      - demo-net
+    restart: always
+
+networks:
+  demo-net:
+    driver: bridge

@@ -1,0 +1,55 @@
+stages:
+  - build
+  - test
+  - quality
+  - security
+  - deploy
+  - release
+  - maintenance
+
+build:
+  stage: build
+  script:
+    - mvn -B package
+
+test:
+  stage: test
+  script:
+    - mvn -B test
+
+quality:
+  stage: quality
+  script:
+    - mvn spotbugs:check
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+
+deploy_dev:
+  stage: deploy
+  only:
+    - develop
+  script:
+    - ./scripts/deploy-dev.sh
+
+deploy_qa:
+  stage: deploy
+  only:
+    - main
+  script:
+    - ./scripts/deploy-qa.sh
+
+release:
+  stage: release
+  only:
+    - main
+  script:
+    - mvn versions:set -DnewVersion=$(date +%Y.%m.%d)
+    - git tag v$(date +%Y.%m.%d)
+
+maintenance:
+  stage: maintenance
+  only:
+    - schedules
+  script:
+    - ./scripts/cleanup.sh
