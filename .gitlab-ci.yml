@@ -46,7 +46,7 @@ newman:
 # Deploy DEV
 deploy_dev:
   stage: deploy
-  needs: ["build", "cucumber"]  # ❌ ne dépend pas de newman
+  needs: ["build", "cucumber"]  # ✅ seulement les tests obligatoires ❌ ne dépend pas de newman
   rules:
     - if: $CI_COMMIT_BRANCH == "develop"
   script:
@@ -55,7 +55,7 @@ deploy_dev:
 # Deploy QA
 deploy_qa:
   stage: deploy
-  needs: ["build", "cucumber"]  # ❌ ne dépend pas de newman
+  needs: ["build", "cucumber", "newman"]  # ✅ dépend obligatoirement des tous les tests
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
   script:

@@ -44,8 +44,8 @@ jobs:
 
   deploy_dev:
     runs-on: ubuntu-latest
-    needs: [build, cucumber]  # ❌ ne dépend pas de newman
-    if: github.ref == 'refs/heads/develop'
+    needs: [ build, cucumber ]   # ✅ dépend seulement des tests obligatoires ❌ ne dépend pas de newman
+    if: github.ref == 'refs/heads/main'  # seulement branch main
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to DEV
@@ -53,7 +53,7 @@ jobs:
 
   deploy_qa:
     runs-on: ubuntu-latest
-    needs: [build, cucumber]  # ❌ ne dépend pas de newman
+    needs: [build, cucumber, newman]  # ✅ dépend obligatoirement des tous les tests
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
