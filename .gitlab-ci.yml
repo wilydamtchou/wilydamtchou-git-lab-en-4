@@ -52,12 +52,12 @@ deploy_dev:
   script:
     - ./scripts/deploy-dev.sh
 
-# Deploy QA
 deploy_qa:
   stage: deploy
   needs: ["build", "cucumber", "newman"]  # ✅ dépend obligatoirement des tous les tests
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+  when: manual        # ✅ manuel, ne démarre pas automatiquement
   script:
     - ./scripts/deploy-qa.sh
 
