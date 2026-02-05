@@ -1,32 +1,40 @@
 stages:
   - build
   - test
-  - quality
-  - security
   - deploy
-  - release
   - maintenance
+
+default:
+  interruptible: true
+  retry: 1
+  allow_failure: false
 
 build:
   stage: build
   script:
     - mvn -B package
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
-test:
+cucumber:
   stage: test
+  needs: ["build"]
   script:
-    - mvn -B test
+    - mvn -B test -Dcucumber.options="--plugin json:target/cucumber.json"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
-quality:
-  stage: quality
+newman:
+  stage: test
+  needs: ["build"]
   script:
-    - mvn spotbugs:check
-
-include:
-  - template: Security/SAST.gitlab-ci.yml
+    - newman run tests/postman_collection.json
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 deploy_dev:
   stage: deploy
+  needs: ["build", "cucumber", "newman"]
   only:
     - develop
   script:
@@ -34,6 +42,7 @@ deploy_dev:
 
 deploy_qa:
   stage: deploy
+  needs: ["build", "cucumber", "newman"]
   only:
     - main
   script:
