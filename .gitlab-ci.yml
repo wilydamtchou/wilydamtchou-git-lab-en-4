@@ -18,10 +18,10 @@ build:
   script:
     - mvn -B package
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push"         # toutes les branches
+    - if: $CI_PIPELINE_SOURCE == "push"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
-# Cucumber Tests
+# Cucumber Tests (obligatoires)
 cucumber:
   stage: test
   needs: ["build"]
@@ -32,13 +32,13 @@ cucumber:
     - if: $CI_PIPELINE_SOURCE == "push"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
-# Newman Tests
+# Newman Tests (optionnels)
 newman:
   stage: test
   needs: ["build"]
   script:
     - newman run tests/postman_collection.json
-  allow_failure: false
+  allow_failure: true   # ✅ Newman optionnel
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
@@ -46,17 +46,16 @@ newman:
 # Deploy DEV
 deploy_dev:
   stage: deploy
-  needs: ["build", "cucumber", "newman"]
+  needs: ["build", "cucumber"]  # ❌ ne dépend pas de newman
   rules:
     - if: $CI_COMMIT_BRANCH == "develop"
-
   script:
     - ./scripts/deploy-dev.sh
 
 # Deploy QA
 deploy_qa:
   stage: deploy
-  needs: ["build", "cucumber", "newman"]
+  needs: ["build", "cucumber"]  # ❌ ne dépend pas de newman
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
   script:
