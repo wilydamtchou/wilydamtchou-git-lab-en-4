@@ -1,3 +1,5 @@
+# Project 4 GitLab CI pipeline
+
 stages:
   - build
   - test
