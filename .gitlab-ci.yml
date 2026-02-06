@@ -1,80 +1,227 @@
+# GitLab CI/CD Pipeline
+# Transcribed from GitHub Actions workflows
+
 stages:
   - build
   - test
-  - deploy
+  - deploy-dev
+  - deploy-qa
   - release
   - maintenance
 
-default:
-  interruptible: true
-  retry: 1
-  image: maven:3.9-eclipse-temurin-17
-  before_script:
-    - echo "Starting job $CI_JOB_NAME"
+variables:
+  MAVEN_OPTS: "-Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=5"
+  MAVEN_CLI_OPTS: "-B ${MAVEN_OPTS}"
+  DOCKER_HOST: "unix:///var/run/docker.sock"
 
-# Build
+# ============================================================================
+# CI FLOW - Build and Test Jobs
+# ============================================================================
+
 build:
   stage: build
+  image: maven:3.9.0-eclipse-temurin-17
   script:
-    - mvn -B package
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    - mvn ${MAVEN_CLI_OPTS} verify
+  artifacts:
+    paths:
+      - target/
+    expire_in: 1 day
+  cache:
+    paths:
+      - .m2/repository/
+  tags:
+    - docker
+  interruptible: true
 
-# Cucumber Tests (obligatoires)
 cucumber:
   stage: test
-  needs: ["build"]
+  image: maven:3.9.0-eclipse-temurin-17
+  needs:
+    - build
   script:
-    - mvn -B test -Dcucumber.options="--plugin json:target/cucumber.json"
-  allow_failure: false
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    - mvn ${MAVEN_CLI_OPTS} test -Dcucumber.options="--plugin json:target/cucumber.json"
+  artifacts:
+    paths:
+      - target/cucumber.json
+    expire_in: 1 day
+  cache:
+    paths:
+      - .m2/repository/
+  tags:
+    - docker
+  interruptible: true
 
-# Newman Tests (optionnels)
 newman:
   stage: test
-  needs: ["build"]
+  image: maven:3.9.0-eclipse-temurin-17
+  needs:
+    - build
+  allow_failure: true
+  before_script:
+    - apt-get update && apt-get install -y nodejs npm
+    - npm install -g newman
   script:
-    - newman run tests/api-tests.json
-  allow_failure: true   # ✅ Newman optionnel
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    - mvn ${MAVEN_CLI_OPTS} clean package -DskipTests
+    - java -jar target/demo-pipeline-0.0.1-SNAPSHOT.jar &
+    - sleep 10
+    - newman run postman/api-tests.json
+  artifacts:
+    paths:
+      - target/demo-pipeline-0.0.1-SNAPSHOT.jar
+    expire_in: 1 day
+  cache:
+    paths:
+      - .m2/repository/
+  tags:
+    - docker
+  interruptible: true
 
-# Deploy DEV
+# ============================================================================
+# CD FLOW - Deploy to DEV
+# ============================================================================
+
 deploy_dev:
-  stage: deploy
-  needs: ["build", "cucumber"]  # ✅ seulement les tests obligatoires ❌ ne dépend pas de newman
-  rules:
-    - if: $CI_COMMIT_BRANCH == "develop"
+  stage: deploy-dev
+  image: ubuntu:latest
+  needs:
+    - build
+    - cucumber
+    - newman
+  only:
+    - main
   script:
-    - ./scripts/deploy-dev.sh
+    - bash ./scripts/deploy-dev.sh
+  tags:
+    - self-hosted
+  interruptible: false
+
+# ============================================================================
+# DEPLOY-DEV WORKFLOW - Manual Deployment with Approval
+# ============================================================================
+
+deploy_dev_manual:
+  stage: deploy-dev
+  image: ubuntu:latest
+  needs:
+    - build
+    - cucumber
+    - newman
+  when: manual
+  script:
+    - bash ./scripts/deploy-dev.sh
+  tags:
+    - self-hosted
+  interruptible: false
+
+# ============================================================================
+# DEPLOY-QA WORKFLOW - Deployment to QA with Tag Selection
+# ============================================================================
 
 deploy_qa:
-  stage: deploy
-  needs: ["build", "cucumber", "newman"]  # ✅ dépend obligatoirement des tous les tests
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-  when: manual        # ✅ manuel, ne démarre pas automatiquement
+  stage: deploy-qa
+  image: ubuntu:latest
+  needs:
+    - build
+  only:
+    - tags
   script:
-    - ./scripts/deploy-qa.sh
+    # Clean Git cache if exists
+    - |
+      if [ -d ".git" ]; then
+        git clean -fdx
+        git reset --hard
+        rm -rf .git
+      fi
 
-# Release
+    # Show version
+    - git describe --tags --always || echo "No tag found"
+
+    # Build Maven package
+    - apt-get update && apt-get install -y openjdk-17-jdk-headless maven docker.io docker-compose
+    - mvn clean package -DskipTests -q ${MAVEN_OPTS}
+
+    # Deploy to QA
+    - bash ./scripts/deploy-qa.sh
+
+    # Verify QA Deployment
+    - |
+      echo "⏳ Waiting for QA application to start..."
+      sleep 20
+      
+      echo "🧪 Testing QA application with retries..."
+      for i in {1..10}; do
+        echo "  Attempt $i/10..."
+        if curl -s http://localhost:8082/actuator/health > /dev/null 2>&1; then
+          echo "✅ QA deployment successful!"
+          exit 0
+        fi
+        sleep 3
+      done
+      
+      echo "❌ QA application not responding after retries"
+      echo ""
+      echo "📋 Container logs:"
+      docker compose -f docker-compose-qa.yml logs || true
+      exit 1
+  tags:
+    - self-hosted
+  interruptible: false
+
+# ============================================================================
+# RELEASE WORKFLOW - Create Release Tag
+# ============================================================================
+
 release:
   stage: release
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+  image: ubuntu:latest
+  when: manual
   script:
-    - mvn versions:set -DnewVersion=$(date +%Y.%m.%d)
-    - git tag v$(date +%Y.%m.%d)
-    - git push origin --tags
+    - apt-get update && apt-get install -y git openjdk-17-jdk-headless maven
 
-# Maintenance
+    # Configure Git
+    - git config --global user.name "gitlab-runner"
+    - git config --global user.email "gitlab-runner@gitlab.local"
+
+    # Create and Push Release Tag
+    - |
+      VERSION=$(date +%Y.%m.%d)
+      TIMESTAMP=$(date +%H%M%S)
+      TAG=v${VERSION}-${TIMESTAMP}
+      
+      # Create tag on current commit
+      git tag $TAG
+      
+      # Push tag to remote
+      git push https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git $TAG
+      
+      echo "✅ Release tag $TAG created and pushed successfully!"
+  tags:
+    - docker
+  interruptible: false
+
+# ============================================================================
+# MAINTENANCE WORKFLOW - Cleanup Job (Scheduled)
+# ============================================================================
+
 maintenance:
   stage: maintenance
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
+  image: ubuntu:latest
   script:
     - ./scripts/cleanup.sh
+  only:
+    - schedules
+  tags:
+    - docker
+  interruptible: true
+
+# Manual maintenance trigger
+maintenance_manual:
+  stage: maintenance
+  image: ubuntu:latest
+  when: manual
+  script:
+    - ./scripts/cleanup.sh
+  tags:
+    - docker
+  interruptible: true
