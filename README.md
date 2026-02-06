@@ -34,7 +34,6 @@ Create the project:
 spring init --dependencies=web,actuator demo-pipeline
 
 
-
 Add a Controller:
 
 
