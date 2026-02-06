@@ -62,7 +62,9 @@ newman:
   needs: [build]
   allow_failure: true
   before_script:
-    - apt-get update && apt-get install -y nodejs npm curl
+    - apt-get update && apt-get install -y curl
+    - curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+    - apt-get install -y nodejs
     - npm install -g newman
   script:
     - mvn ${MAVEN_CLI_OPTS} clean package -DskipTests
