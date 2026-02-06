@@ -13,7 +13,7 @@ Create professional and comprehensive PR/MR
 Integrate CI/CD into PR/MR
 Building a complete GitHub Actions pipeline
 Build a complete GitLab CI pipeline
-Integrate quality, security, advanced testing, deployment, release, and scheduled jobs.
+Integrate quality, security, advanced testing, deployment, releases, and scheduled jobs.
 Understanding the strategic role of PR/MR in DevOps
 Automatically deploy a Spring Boot project across multiple environments
 
