@@ -15,7 +15,7 @@ jobs:
 
   # 🔹 CD Job - Use existing CD workflow
   #   Executed if CI is successful
-  deloy:
-    needs: ci  # ✅ Wait from CI to finish
+  deploy:
+    needs: call-ci  # ✅ Wait from CI to finish
     if: ${{ github.event.inputs.confirm == 'yes' }}  # ✅ Only run if approved
     uses: ./.github/workflows/cd-flow.yml
