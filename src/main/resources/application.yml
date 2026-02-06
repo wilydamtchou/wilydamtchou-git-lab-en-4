@@ -4,3 +4,19 @@ server:
 spring:
   application:
     name: demo-pipeline
+  profiles:
+    active: dev
+    include: dev, qa, prod
+
+# Default/Common Configuration
+app:
+  version: 1.0.0
+  author: Demo Team
+
+# Logging Configuration
+logging:
+  file:
+    name: logs/demo-pipeline.log
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
