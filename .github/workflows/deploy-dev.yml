@@ -7,10 +7,6 @@ on:
         description: "Deploy from main only"
         required: true
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   # 🔹 CI Job - Use existing CI workflow
   ci:
