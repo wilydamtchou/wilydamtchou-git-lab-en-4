@@ -1,5 +1,7 @@
+# ============================================================================
 # GitLab CI/CD Pipeline
-# Transcribed from GitHub Actions workflows
+# CI actif — Deploy / Release / Maintenance désactivés via variable
+# ============================================================================
 
 stages:
   - build
@@ -13,9 +15,10 @@ variables:
   MAVEN_OPTS: "-Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=5"
   MAVEN_CLI_OPTS: "-B ${MAVEN_OPTS}"
   DOCKER_HOST: "unix:///var/run/docker.sock"
+  DISABLE_DEPLOY: "true"   # 🔴 switch global pour bloquer tous les déploiements
 
 # ============================================================================
-# CI FLOW - Build and Test Jobs
+# CI FLOW — BUILD
 # ============================================================================
 
 build:
@@ -34,11 +37,14 @@ build:
     - docker
   interruptible: true
 
+# ============================================================================
+# TEST — CUCUMBER
+# ============================================================================
+
 cucumber:
   stage: test
   image: maven:3.9.0-eclipse-temurin-17
-  needs:
-    - build
+  needs: [build]
   script:
     - mvn ${MAVEN_CLI_OPTS} test -Dcucumber.options="--plugin json:target/cucumber.json"
   artifacts:
@@ -52,14 +58,17 @@ cucumber:
     - docker
   interruptible: true
 
+# ============================================================================
+# TEST — NEWMAN (non bloquant)
+# ============================================================================
+
 newman:
   stage: test
   image: maven:3.9.0-eclipse-temurin-17
-  needs:
-    - build
+  needs: [build]
   allow_failure: true
   before_script:
-    - apt-get update && apt-get install -y nodejs npm
+    - apt-get update && apt-get install -y nodejs npm curl
     - npm install -g newman
   script:
     - mvn ${MAVEN_CLI_OPTS} clean package -DskipTests
@@ -78,36 +87,32 @@ newman:
   interruptible: true
 
 # ============================================================================
-# CD FLOW - Deploy to DEV
+# DEPLOY DEV — DÉSACTIVÉ
 # ============================================================================
 
 deploy_dev:
   stage: deploy-dev
   image: ubuntu:latest
-  needs:
-    - build
-    - cucumber
-    - newman
-  only:
-    - main
+  needs: [build, cucumber, newman]
+  rules:
+    - if: '$DISABLE_DEPLOY == "true"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
   script:
     - bash ./scripts/deploy-dev.sh
   tags:
     - self-hosted
   interruptible: false
-
-# ============================================================================
-# DEPLOY-DEV WORKFLOW - Manual Deployment with Approval
-# ============================================================================
 
 deploy_dev_manual:
   stage: deploy-dev
   image: ubuntu:latest
-  needs:
-    - build
-    - cucumber
-    - newman
-  when: manual
+  needs: [build, cucumber, newman]
+  rules:
+    - if: '$DISABLE_DEPLOY == "true"'
+      when: never
+    - when: manual
   script:
     - bash ./scripts/deploy-dev.sh
   tags:
@@ -115,111 +120,72 @@ deploy_dev_manual:
   interruptible: false
 
 # ============================================================================
-# DEPLOY-QA WORKFLOW - Deployment to QA with Tag Selection
+# DEPLOY QA — DÉSACTIVÉ
 # ============================================================================
 
 deploy_qa:
   stage: deploy-qa
   image: ubuntu:latest
-  needs:
-    - build
-  only:
-    - tags
+  needs: [build]
+  rules:
+    - if: '$DISABLE_DEPLOY == "true"'
+      when: never
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
   script:
-    # Clean Git cache if exists
-    - |
-      if [ -d ".git" ]; then
-        git clean -fdx
-        git reset --hard
-        rm -rf .git
-      fi
-
-    # Show version
-    - git describe --tags --always || echo "No tag found"
-
-    # Build Maven package
-    - apt-get update && apt-get install -y openjdk-17-jdk-headless maven docker.io docker-compose
-    - mvn clean package -DskipTests -q ${MAVEN_OPTS}
-
-    # Deploy to QA
     - bash ./scripts/deploy-qa.sh
-
-    # Verify QA Deployment
-    - |
-      echo "⏳ Waiting for QA application to start..."
-      sleep 20
-      
-      echo "🧪 Testing QA application with retries..."
-      for i in {1..10}; do
-        echo "  Attempt $i/10..."
-        if curl -s http://localhost:8082/actuator/health > /dev/null 2>&1; then
-          echo "✅ QA deployment successful!"
-          exit 0
-        fi
-        sleep 3
-      done
-      
-      echo "❌ QA application not responding after retries"
-      echo ""
-      echo "📋 Container logs:"
-      docker compose -f docker-compose-qa.yml logs || true
-      exit 1
   tags:
     - self-hosted
   interruptible: false
 
 # ============================================================================
-# RELEASE WORKFLOW - Create Release Tag
+# RELEASE — DÉSACTIVÉ
 # ============================================================================
 
 release:
   stage: release
   image: ubuntu:latest
-  when: manual
+  rules:
+    - if: '$DISABLE_DEPLOY == "true"'
+      when: never
+    - when: manual
   script:
-    - apt-get update && apt-get install -y git openjdk-17-jdk-headless maven
-
-    # Configure Git
+    - apt-get update && apt-get install -y git
     - git config --global user.name "gitlab-runner"
     - git config --global user.email "gitlab-runner@gitlab.local"
-
-    # Create and Push Release Tag
-    - |
-      VERSION=$(date +%Y.%m.%d)
-      TIMESTAMP=$(date +%H%M%S)
-      TAG=v${VERSION}-${TIMESTAMP}
-      
-      # Create tag on current commit
-      git tag $TAG
-      
-      # Push tag to remote
-      git push https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git $TAG
-      
-      echo "✅ Release tag $TAG created and pushed successfully!"
+    - VERSION=$(date +%Y.%m.%d)
+    - TAG=v${VERSION}-$(date +%H%M%S)
+    - git tag $TAG
+    - git push https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git $TAG
   tags:
     - docker
   interruptible: false
 
 # ============================================================================
-# MAINTENANCE WORKFLOW - Cleanup Job (Scheduled)
+# MAINTENANCE — DÉSACTIVÉ
 # ============================================================================
 
 maintenance:
   stage: maintenance
   image: ubuntu:latest
+  rules:
+    - if: '$DISABLE_DEPLOY == "true"'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: on_success
   script:
     - ./scripts/cleanup.sh
-  only:
-    - schedules
   tags:
     - docker
   interruptible: true
 
-# Manual maintenance trigger
 maintenance_manual:
   stage: maintenance
   image: ubuntu:latest
-  when: manual
+  rules:
+    - if: '$DISABLE_DEPLOY == "true"'
+      when: never
+    - when: manual
   script:
     - ./scripts/cleanup.sh
   tags:
