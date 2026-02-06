@@ -30,7 +30,8 @@ jobs:
       - name: Create and Push Release Tag
         run: |
           VERSION=$(date +%Y.%m.%d)
-          TAG=v${VERSION}
+          TIMESTAMP=$(date +%H%M%S)
+          TAG=v${VERSION}-${TIMESTAMP}
           
           # Create tag on current commit
           git tag $TAG
