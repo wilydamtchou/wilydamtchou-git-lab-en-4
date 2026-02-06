@@ -13,5 +13,8 @@ jobs:
     if: github.ref == 'refs/heads/main'  # Only main branch
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: true
       - name: Deploy to DEV
         run: bash ./scripts/deploy-dev.sh

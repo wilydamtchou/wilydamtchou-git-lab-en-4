@@ -13,6 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: true
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -25,6 +28,9 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: true
       - name: Run Cucumber Tests
         run: mvn -B test -Dcucumber.options="--plugin json:target/cucumber.json"
 
@@ -34,6 +40,9 @@ jobs:
     continue-on-error: true   # ✅ Optional
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: true
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
