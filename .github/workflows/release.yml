@@ -9,9 +9,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: true
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven  # ✅ Cache Maven dependencies
 
       - name: Set Version
-        run: mvn versions:set -DnewVersion=$(date +%Y.%m.%d)
+        run: mvn versions:set -DnewVersion=$(date +%Y.%m.%d) -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=5
 
       - name: Commit version
         run: |
