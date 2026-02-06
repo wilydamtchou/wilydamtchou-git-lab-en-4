@@ -1,0 +1,17 @@
+name: CD Flow
+
+on:
+  workflow_call:   # ✅ Reusable Workflow
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy_dev:
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main'  # Only main branch
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to DEV
+        run: bash ./scripts/deploy-dev.sh

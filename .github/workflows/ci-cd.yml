@@ -1,11 +1,10 @@
-name: Deploy Dev
+name: CI-CD
 
 on:
-  workflow_dispatch:
-    inputs:
-      confirm:
-        description: "Deploy from main only"
-        required: true
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: [ main ]
 
 concurrency:
   group: ci-${{ github.ref }}
