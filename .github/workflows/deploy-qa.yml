@@ -1,16 +1,24 @@
 name: Deploy QA
 
 on:
-  workflow_dispatch:  # Manual trigger
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to deploy (ex: v2026.02.06)"
+        required: true
 
 jobs:
   deploy_qa:
     runs-on: self-hosted
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout selected tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag }}
+
+      - name: Show version
+        run: git describe --tags --always
+
       - name: Deploy to QA
         run: bash ./scripts/deploy-qa.sh
