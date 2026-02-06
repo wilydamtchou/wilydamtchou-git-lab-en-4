@@ -4,8 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: "Deploy from main only"
+        description: "Do you approve deployment ? (yes/no)"
         required: true
+        default: "no"
 
 jobs:
   # 🔹 CI Job - Use existing CI workflow
@@ -16,4 +17,5 @@ jobs:
   #   Executed if CI is successful
   cd:
     needs: ci  # ✅ Wait from CI to finish
+    if: ${{ github.event.inputs.confirm == 'yes' }}  # ✅ Only run if approved
     uses: ./.github/workflows/cd-flow.yml
