@@ -2,7 +2,7 @@ name: CI-CD
 
 on:
   push:
-    branches: ["**"]  # Déclenche sur TOUS les push de toutes les branches
+    branches: ["**"]  # Trigger on all branches
   pull_request:
     branches: [ main ]
 
