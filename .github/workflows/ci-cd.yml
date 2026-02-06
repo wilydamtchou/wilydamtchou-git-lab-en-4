@@ -2,7 +2,7 @@ name: CI-CD
 
 on:
   push:
-    branches: ["*"]
+    branches: ["**"]  # Trigger on all branches
   pull_request:
     branches: [ main ]
 
@@ -10,9 +10,11 @@ jobs:
   # 🔹 CI Job - Use existing CI workflow
   ci:
     uses: ./.github/workflows/ci-flow.yml
+    secrets: inherit  # ✅ sends secrets to reusable workflow
 
   # 🔹 CD Job - Use existing CD workflow
   #   Executed if CI is successful
   cd:
     needs: ci  # ✅ Wait from CI to finish
     uses: ./.github/workflows/cd-flow.yml
+    secrets: inherit  # ✅ Sends secrets to reusable workflow
