@@ -14,8 +14,6 @@ stages:
 variables:
   MAVEN_OPTS: "-Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=5"
   MAVEN_CLI_OPTS: "-B ${MAVEN_OPTS}"
-  DOCKER_HOST: "unix:///var/run/docker.sock"
-  DISABLE_DEPLOY: "true"   # 🔴 switch global pour bloquer tous les déploiements
 
 # ============================================================================
 # CI FLOW — BUILD
