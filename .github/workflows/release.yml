@@ -5,7 +5,6 @@ on:
 
 permissions:
   contents: write  # ✅ Allow writing to repository
-  id-token: write  # ✅ Allow OIDC token for authentication
 
 jobs:
   release:
@@ -27,16 +26,16 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global push.default simple
 
-      - name: Set Version
-        run: mvn versions:set -DnewVersion=$(date +%Y.%m.%d) -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=5
-
-      - name: Commit and Tag Version
+      - name: Create and Push Release Tag
         run: |
-          git add pom.xml
-          git commit -m "Release version $(date +%Y.%m.%d)"
-          TAG=v$(date +%Y.%m.%d)
+          VERSION=$(date +%Y.%m.%d)
+          TAG=v${VERSION}
+          
+          # Create tag on current commit
           git tag $TAG
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git --tags
+          
+          # Push tag to remote
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git $TAG
+          
+          echo "✅ Release tag $TAG created and pushed successfully!"
