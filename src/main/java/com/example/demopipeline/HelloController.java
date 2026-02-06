@@ -10,6 +10,6 @@ public class HelloController {
     @SuppressFBWarnings("NP_NONNULL_RETURN_VIOLATION")
     @GetMapping("/hello")
     public String hello() {
-        return "Hello CI/CD";
+        return "Hello CI/CD Pipeline!";
     }
 }
