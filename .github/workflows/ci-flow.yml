@@ -16,12 +16,15 @@ jobs:
         with:
           fetch-depth: 0
           clean: true
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
+          cache: maven  # ✅ Cache Maven dependencies
+
       - name: Build & Verify
-        run: mvn -B verify
+        run: mvn -B verify -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=5
 
   cucumber:
     runs-on: ubuntu-latest
@@ -31,8 +34,15 @@ jobs:
         with:
           fetch-depth: 0
           clean: true
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven  # ✅ Cache Maven dependencies
+
       - name: Run Cucumber Tests
-        run: mvn -B test -Dcucumber.options="--plugin json:target/cucumber.json"
+        run: mvn -B test -Dcucumber.options="--plugin json:target/cucumber.json" -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=5
 
   newman:
     runs-on: ubuntu-latest
@@ -43,12 +53,15 @@ jobs:
         with:
           fetch-depth: 0
           clean: true
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
+          cache: maven  # ✅ Cache Maven dependencies
+
       - name: Build Application
-        run: mvn -B clean package -DskipTests
+        run: mvn -B clean package -DskipTests -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=5
       - name: Start Application
         run: |
           java -jar target/demo-pipeline-0.0.1-SNAPSHOT.jar &
