@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to deploy (ex: v2026.02.06)"
+        description: "Release tag to deploy (ex: v2026.02.06-140530)"
         required: true
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: deploy-qa-${{ github.event.inputs.tag }}
+  cancel-in-progress: false
 
 jobs:
   deploy_qa:
@@ -37,5 +37,29 @@ jobs:
       - name: Show version
         run: git describe --tags --always
 
+      - name: Setup Java with Maven cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
+      - name: Build Maven package for tag
+        run: mvn clean package -DskipTests -q -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=5
+
       - name: Deploy to QA
         run: bash ./scripts/deploy-qa.sh
+
+      - name: Verify QA Deployment
+        run: |
+          echo "⏳ Waiting for QA application to start..."
+          sleep 10
+          
+          echo "🧪 Testing QA application..."
+          if curl -f http://localhost:8082/actuator/health; then
+            echo "✅ QA deployment successful!"
+          else
+            echo "❌ QA application not responding"
+            docker compose -f docker-compose-qa.yml logs
+            exit 1
+          fi
