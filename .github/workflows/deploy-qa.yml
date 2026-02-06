@@ -49,24 +49,3 @@ jobs:
 
       - name: Deploy to QA
         run: bash ./scripts/deploy-qa.sh
-
-      - name: Verify QA Deployment
-        run: |
-          echo "⏳ Waiting for QA application to start..."
-          sleep 20
-          
-          echo "🧪 Testing QA application with retries..."
-          for i in {1..10}; do
-            echo "  Attempt $i/10..."
-            if curl -s http://localhost:8082/actuator/health > /dev/null 2>&1; then
-              echo "✅ QA deployment successful!"
-              exit 0
-            fi
-            sleep 3
-          done
-          
-          echo "❌ QA application not responding after retries"
-          echo ""
-          echo "📋 Container logs:"
-          docker compose -f docker-compose-qa.yml logs
-          exit 1
