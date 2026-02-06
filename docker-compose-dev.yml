@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   demo-pipeline-dev:
     image: demo-pipeline:dev
@@ -21,10 +19,10 @@ services:
     # Health check to verify app is running
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 5s
-      timeout: 10s
+      interval: 2s
+      timeout: 5s
       retries: 5
-      start_period: 60s  # ✅ Increased from 40s to 60s
+      start_period: 30s  # Allow 30s startup before health check kicks in
     # Resource limits
     deploy:
       resources:

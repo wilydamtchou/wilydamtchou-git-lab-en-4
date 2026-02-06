@@ -4,10 +4,29 @@ set -e
 echo "🚀 Starting QA deployment..."
 echo ""
 
-# Check if JAR file exists (from workflow build)
+# ==================== DIAGNOSTIC ====================
+echo "📊 System Resources Diagnostic:"
+echo "Disk space:"
+df -h | grep -E "Filesystem|/$" || true
+echo ""
+echo "Memory available:"
+vm_stat 2>/dev/null | grep "Pages free" || free -h || true
+echo ""
+echo "Docker info:"
+docker system df || true
+echo ""
+echo "Running containers:"
+docker ps --all || true
+echo ""
+echo "===================================================="
+echo ""
+
 if [ ! -f "target/demo-pipeline-0.0.1-SNAPSHOT.jar" ]; then
   echo "📦 JAR file not found, building Maven package..."
   mvn clean package -DskipTests -q -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=5
+  echo ""
+else
+  echo "📦 Using existing JAR file..."
   echo ""
 fi
 
@@ -17,9 +36,26 @@ docker rm -f demo-pipeline-qa 2>/dev/null || true
 docker rmi -f demo-pipeline:qa 2>/dev/null || true
 echo ""
 
-# Step 2: Build new Docker image for QA (no cache)
+# Step 2: Build new Docker image for QA
 echo "🏗️  Building Docker image for QA (no cache)..."
-docker build --no-cache -t demo-pipeline:qa .
+docker build --no-cache -t demo-pipeline:qa . || {
+  echo "❌ Docker build failed!"
+  echo "📋 Docker images:"
+  docker images || true
+  echo ""
+  echo "📋 Docker system prune (to free space):"
+  docker system prune -f || true
+  exit 1
+}
+echo ""
+
+# Verify image was created
+if ! docker images | grep -q "demo-pipeline.*qa"; then
+  echo "❌ QA image not found after build!"
+  docker images || true
+  exit 1
+fi
+echo "✅ QA image created successfully"
 echo ""
 
 # Step 3: Start QA environment (without --remove-orphans to preserve dev container)
@@ -36,14 +72,24 @@ sleep 3
 # Check if container is running
 if ! docker ps --filter "name=demo-pipeline-qa" --filter "status=running" | grep -q "demo-pipeline-qa"; then
   echo "❌ QA container failed to start"
+  echo ""
+  echo "📋 Container status:"
+  docker ps -a | grep demo-pipeline-qa || true
+  echo ""
   echo "📋 Container logs:"
-  docker compose -f docker-compose-qa.yml logs
+  docker compose -f docker-compose-qa.yml logs demo-pipeline-qa 2>&1 | tail -100 || true
+  echo ""
+  echo "📋 Docker system state:"
+  docker system df || true
   exit 1
 fi
 
+echo "✅ Container is running"
+echo ""
+
 # Wait for application to be ready using container health check
-MAX_RETRIES=60
-SLEEP_SECONDS=2
+MAX_RETRIES=40
+SLEEP_SECONDS=1
 
 for i in $(seq 1 $MAX_RETRIES); do
   # Check container health status
@@ -55,7 +101,7 @@ for i in $(seq 1 $MAX_RETRIES); do
   elif [ "$HEALTH_STATUS" = "unhealthy" ]; then
     echo "❌ QA application is unhealthy"
     echo "📋 Container logs:"
-    docker compose -f docker-compose-qa.yml logs demo-pipeline-qa | tail -30
+    docker compose -f docker-compose-qa.yml logs
     exit 1
   fi
 
@@ -67,7 +113,7 @@ for i in $(seq 1 $MAX_RETRIES); do
   if [ "$i" -eq "$MAX_RETRIES" ]; then
     echo "❌ QA application did not become healthy after $MAX_RETRIES attempts"
     echo "📋 Container logs:"
-    docker compose -f docker-compose-qa.yml logs demo-pipeline-qa | tail -50
+    docker compose -f docker-compose-qa.yml logs
     exit 1
   fi
 done
