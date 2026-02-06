@@ -20,6 +20,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag }}
+          fetch-depth: 0
+          clean: true
+          lfs: false
 
       - name: Show version
         run: git describe --tags --always
