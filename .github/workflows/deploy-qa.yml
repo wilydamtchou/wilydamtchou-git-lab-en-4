@@ -16,6 +16,16 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - name: Cleanup Docker resources (free up space on self-hosted runner)
+        run: |
+          echo "🧹 Cleaning up old Docker images/containers..."
+          docker image prune -f || true
+          docker container prune -f || true
+          docker volume prune -f || true
+          echo "📊 Docker system state:"
+          docker system df || true
+        continue-on-error: true
+
       - name: Clean Git cache (if exists)
         run: |
           if [ -d "${{ github.workspace }}/.git" ]; then
@@ -49,3 +59,43 @@ jobs:
 
       - name: Deploy to QA
         run: bash ./scripts/deploy-qa.sh
+
+      - name: Verify QA Deployment
+        if: success()
+        run: |
+          echo "⏳ Waiting for QA application to start..."
+          sleep 15
+          
+          echo "🧪 Testing QA application with retries..."
+          for i in {1..20}; do
+            echo "  Attempt $i/20..."
+            if curl -s http://localhost:8082/actuator/health 2>/dev/null | grep -q "UP\|status.*UP"; then
+              echo "✅ QA deployment successful!"
+              echo ""
+              echo "📋 Health check response:"
+              curl -s http://localhost:8082/actuator/health 2>/dev/null || echo "curl failed"
+              exit 0
+            fi
+            sleep 3
+          done
+          
+          echo "❌ QA application not responding after retries"
+          echo ""
+          echo "📋 Container logs (last 100 lines):"
+          docker compose -f docker-compose-qa.yml logs demo-pipeline-qa 2>&1 | tail -100 || true
+          echo ""
+          echo "📋 Docker system state:"
+          docker system df || true
+          exit 1
+
+      - name: Display QA status
+        if: success()
+        run: |
+          echo "✅ QA Deployment Successful!"
+          echo ""
+          echo "🌐 Access the application at: http://localhost:8082"
+          echo "📝 Logs: docker compose -f docker-compose-qa.yml logs -f"
+          echo ""
+          docker compose -f docker-compose-qa.yml ps
+
+
