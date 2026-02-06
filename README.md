@@ -22,7 +22,7 @@ You are working in a DevOps team on an internal project called UCC-DemoPipeline,
 Your mission: to set up a complete Git workflow + a complete CI/CD pipeline, inspired by an enterprise pipeline.
 
 
-Exercise 1: Creating the Spring Boot Project
+Exercise 1: Creating the Spring Boot Project.
 
 1.1 Objective
 Create a minimal Spring Boot project to serve as the basis for the pipeline.
