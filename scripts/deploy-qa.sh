@@ -42,8 +42,8 @@ if ! docker ps --filter "name=demo-pipeline-qa" --filter "status=running" | grep
 fi
 
 # Wait for application to be ready using container health check
-MAX_RETRIES=40
-SLEEP_SECONDS=1
+MAX_RETRIES=60
+SLEEP_SECONDS=2
 
 for i in $(seq 1 $MAX_RETRIES); do
   # Check container health status
@@ -55,7 +55,7 @@ for i in $(seq 1 $MAX_RETRIES); do
   elif [ "$HEALTH_STATUS" = "unhealthy" ]; then
     echo "❌ QA application is unhealthy"
     echo "📋 Container logs:"
-    docker compose -f docker-compose-qa.yml logs
+    docker compose -f docker-compose-qa.yml logs demo-pipeline-qa | tail -30
     exit 1
   fi
 
@@ -67,7 +67,7 @@ for i in $(seq 1 $MAX_RETRIES); do
   if [ "$i" -eq "$MAX_RETRIES" ]; then
     echo "❌ QA application did not become healthy after $MAX_RETRIES attempts"
     echo "📋 Container logs:"
-    docker compose -f docker-compose-qa.yml logs
+    docker compose -f docker-compose-qa.yml logs demo-pipeline-qa | tail -50
     exit 1
   fi
 done

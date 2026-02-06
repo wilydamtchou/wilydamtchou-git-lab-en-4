@@ -14,8 +14,6 @@ stages:
 variables:
   MAVEN_OPTS: "-Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=5"
   MAVEN_CLI_OPTS: "-B ${MAVEN_OPTS}"
-  DOCKER_HOST: "unix:///var/run/docker.sock"
-  DISABLE_DEPLOY: "true"   # 🔴 switch global pour bloquer tous les déploiements
 
 # ============================================================================
 # CI FLOW — BUILD
@@ -33,8 +31,6 @@ build:
   cache:
     paths:
       - .m2/repository/
-  tags:
-    - self-hosted
   interruptible: true
 
 # ============================================================================
@@ -54,8 +50,6 @@ cucumber:
   cache:
     paths:
       - .m2/repository/
-  tags:
-    - self-hosted
   interruptible: true
 
 # ============================================================================
@@ -82,120 +76,4 @@ newman:
   cache:
     paths:
       - .m2/repository/
-  tags:
-    - self-hosted
-  interruptible: true
-
-# ============================================================================
-# DEPLOY QA — DÉSACTIVÉ
-# ============================================================================
-
-deploy_qa:
-  stage: deploy-qa
-  image: ubuntu:latest
-  needs: [build, cucumber, newman]
-  rules:
-    - if: '$DISABLE_DEPLOY == "true"'
-      when: never
-    - if: '$CI_COMMIT_TAG'
-      when: on_success
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      when: manual
-  script:
-    - bash ./scripts/deploy-qa.sh
-  tags:
-    - self-hosted
-  interruptible: false
-
-deploy_dev_manual:
-  stage: deploy-dev
-  image: ubuntu:latest
-  needs: [build, cucumber, newman]
-  rules:
-    - if: '$DISABLE_DEPLOY == "true"'
-      when: never
-    - when: manual
-  script:
-    - bash ./scripts/deploy-dev.sh
-  tags:
-    - self-hosted
-  interruptible: false
-
-# ============================================================================
-# DEPLOY QA — DÉSACTIVÉ
-# ============================================================================
-
-deploy_qa:
-  stage: deploy-qa
-  image: ubuntu:latest
-  needs: [build, cucumber, newman]
-  rules:
-    - if: '$DISABLE_DEPLOY == "true"'
-      when: never
-    - if: '$CI_COMMIT_TAG'
-      when: on_success
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      when: manual
-  script:
-    - bash ./scripts/deploy-qa.sh
-  tags:
-    - self-hosted
-  interruptible: false
-
-# ============================================================================
-# RELEASE — DÉSACTIVÉ
-# ============================================================================
-
-release:
-  stage: release
-  image: ubuntu:latest
-  rules:
-    - if: '$DISABLE_DEPLOY == "true"'
-      when: never
-    - when: manual
-  before_script:
-    - apt-get update && apt-get install -y git
-  script:
-    - git config --global user.name "gitlab-runner"
-    - git config --global user.email "gitlab-runner@gitlab.local"
-    - VERSION=$(date +%Y.%m.%d)
-    - TAG=v${VERSION}-$(date +%H%M%S)
-    - echo "Creating tag: $TAG"
-    - git tag $TAG
-    - echo "Pushing tag: $TAG"
-    - git push https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git $TAG
-    - echo "✅ Tag $TAG created and pushed successfully"
-  tags:
-    - self-hosted
-  interruptible: false
-
-# ============================================================================
-# MAINTENANCE — DÉSACTIVÉ
-# ============================================================================
-
-maintenance:
-  stage: maintenance
-  image: ubuntu:latest
-  rules:
-    - if: '$DISABLE_DEPLOY == "true"'
-      when: never
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: on_success
-  script:
-    - ./scripts/cleanup.sh
-  tags:
-    - self-hosted
-  interruptible: true
-
-maintenance_manual:
-  stage: maintenance
-  image: ubuntu:latest
-  rules:
-    - if: '$DISABLE_DEPLOY == "true"'
-      when: never
-    - when: manual
-  script:
-    - ./scripts/cleanup.sh
-  tags:
-    - self-hosted
   interruptible: true
