@@ -39,10 +39,10 @@ jobs:
         run: newman run tests/postman_collection.json
 
   deploy_dev:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [ build, cucumber ]   # ✅ dépend seulement des tests obligatoires ❌ ne dépend pas de newman
     if: github.ref == 'refs/heads/main'  # seulement branch main
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to DEV
-        run: ./scripts/deploy-dev.sh
+        run: bash ./scripts/deploy-dev.sh

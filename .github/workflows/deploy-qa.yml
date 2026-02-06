@@ -9,8 +9,8 @@ concurrency:
 
 jobs:
   deploy_qa:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to QA
-        run: ./scripts/deploy-qa.sh
+        run: bash ./scripts/deploy-qa.sh
