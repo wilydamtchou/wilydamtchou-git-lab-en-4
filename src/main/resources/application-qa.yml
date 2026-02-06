@@ -4,8 +4,6 @@ server:
 spring:
   application:
     name: demo-pipeline
-  profiles:
-    active: qa
 
 # QA Environment Configuration
 app:

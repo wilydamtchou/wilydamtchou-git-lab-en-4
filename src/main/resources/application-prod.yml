@@ -1,0 +1,22 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: demo-pipeline
+
+# PROD Environment Configuration
+app:
+  name: Demo Pipeline - PRODUCTION
+  environment: production
+  debug: false
+  log:
+    level: WARN
+
+logging:
+  level:
+    root: ERROR
+    com.example.demopipeline: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

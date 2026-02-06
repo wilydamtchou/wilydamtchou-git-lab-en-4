@@ -4,9 +4,6 @@ server:
 spring:
   application:
     name: demo-pipeline
-  profiles:
-    active: dev
-    include: dev, qa, prod
 
 # Default/Common Configuration
 app:
