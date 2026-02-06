@@ -10,10 +10,10 @@ on:
 jobs:
   # 🔹 CI Job - Use existing CI workflow
   ci:
-    uses: ./.github/workflows/ci-flow.yml
+    uses: ./.github/workflows/flows/ci-flow.yml
 
   # 🔹 CD Job - Use existing CD workflow
   #   Executed if CI is successful
   cd:
     needs: ci  # ✅ Wait from CI to finish
-    uses: ./.github/workflows/cd-flow.yml
+    uses: ./.github/workflows/flows/cd-flow.yml
