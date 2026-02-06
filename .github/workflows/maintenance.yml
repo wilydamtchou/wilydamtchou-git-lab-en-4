@@ -2,7 +2,7 @@ name: Maintenance
 
 on:
   schedule:
-    - cron: "15 11 * * 1-5"  # execution between 11:15 and 11:30 AM, Monday to Friday
+    - cron: "*/15 * * * *"  # ✅ Execution every 15 minutes, every day
   workflow_dispatch:         # Possibility to trigger manually
 
 jobs:
