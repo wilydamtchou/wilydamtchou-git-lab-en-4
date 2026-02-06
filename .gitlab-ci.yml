@@ -37,7 +37,7 @@ newman:
   stage: test
   needs: ["build"]
   script:
-    - newman run tests/postman_collection.json
+    - newman run tests/api-tests.json
   allow_failure: true   # ✅ Newman optionnel
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"

@@ -36,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run Newman Tests
-        run: newman run tests/postman_collection.json
+        run: newman run tests/api-tests.json
 
   deploy_dev:
     runs-on: self-hosted
