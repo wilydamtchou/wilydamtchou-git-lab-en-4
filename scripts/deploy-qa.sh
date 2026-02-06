@@ -11,15 +11,15 @@ if [ ! -f "target/demo-pipeline-0.0.1-SNAPSHOT.jar" ]; then
   echo ""
 fi
 
-# Step 1: Stop and remove old containers (force) & remove images
-echo "⏹️  Stopping and removing old containers and images..."
-docker rm -f demo-pipeline-qa demo-pipeline-dev 2>/dev/null || true
-docker rmi -f demo-pipeline:latest 2>/dev/null || true
+# Step 1: Stop and remove old QA container only (do NOT remove dev)
+echo "⏹️  Stopping and removing old QA container and image..."
+docker rm -f demo-pipeline-qa 2>/dev/null || true
+docker rmi -f demo-pipeline:qa 2>/dev/null || true
 echo ""
 
-# Step 2: Build new Docker image (no cache)
-echo "🏗️  Building Docker image (no cache)..."
-docker build --no-cache -t demo-pipeline:latest .
+# Step 2: Build new Docker image for QA (no cache)
+echo "🏗️  Building Docker image for QA (no cache)..."
+docker build --no-cache -t demo-pipeline:qa .
 echo ""
 
 # Step 3: Start QA environment
@@ -28,25 +28,30 @@ docker compose -f docker-compose-qa.yml up -d --remove-orphans
 echo ""
 
 # Step 4: Wait for application to be UP
-echo "⏳ Waiting for QA application to start..."
+echo "⏳ Waiting for QA application to start (this may take a few seconds)..."
 
-MAX_RETRIES=20
-SLEEP_SECONDS=3
+# Wait a bit for the container to fully initialize
+sleep 2
+
+MAX_RETRIES=30
+SLEEP_SECONDS=2
 URL="http://localhost:8082/actuator/health"
 
 for i in $(seq 1 $MAX_RETRIES); do
-  if curl -s $URL | grep -q "UP"; then
+  if curl -s $URL 2>/dev/null | grep -q "UP"; then
     echo "✅ QA application is UP!"
     break
   else
-    echo "Attempt $i/$MAX_RETRIES: waiting..."
+    if [ $((i % 5)) -eq 0 ]; then
+      echo "Attempt $i/$MAX_RETRIES: waiting..."
+    fi
     sleep $SLEEP_SECONDS
   fi
 
   if [ "$i" -eq "$MAX_RETRIES" ]; then
     echo "❌ QA application did not respond after $MAX_RETRIES attempts"
     echo "📋 Container logs:"
-    docker compose -f docker-compose-qa.yml logs -f
+    docker compose -f docker-compose-qa.yml logs
     exit 1
   fi
 done

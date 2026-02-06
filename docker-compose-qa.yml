@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   demo-pipeline-qa:
-    image: demo-pipeline:latest
+    image: demo-pipeline:qa
     container_name: demo-pipeline-qa
     build:
       context: .
