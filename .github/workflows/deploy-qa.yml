@@ -1,7 +1,7 @@
 name: Deploy QA
 
 on:
-  workflow_dispatch:  # déclenchement manuel
+  workflow_dispatch:  # Manual trigger
 
 concurrency:
   group: ci-${{ github.ref }}
