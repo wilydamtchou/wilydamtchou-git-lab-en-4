@@ -31,8 +31,6 @@ build:
   cache:
     paths:
       - .m2/repository/
-  tags:
-    - self-hosted
   interruptible: true
 
 # ============================================================================
@@ -52,8 +50,6 @@ cucumber:
   cache:
     paths:
       - .m2/repository/
-  tags:
-    - self-hosted
   interruptible: true
 
 # ============================================================================
@@ -80,6 +76,4 @@ newman:
   cache:
     paths:
       - .m2/repository/
-  tags:
-    - self-hosted
   interruptible: true
