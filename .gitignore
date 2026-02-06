@@ -29,5 +29,29 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+### GitHub Actions Self-Hosted Runner ###
+# Do NOT commit the runner directory - it contains large files and is specific to local machine
+actions-runner/
+.runner
+.credentials
+.credentials_rsaparams
+
+### Build Artifacts ###
+*.jar
+*.war
+*.ear
+
+### OS Files ###
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+*.log
+
+### Dependencies ###
+node_modules/
+npm-debug.log
+
 ### VS Code ###
 .vscode/
