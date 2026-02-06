@@ -1,17 +1,23 @@
 name: Deploy Dev
 
 on:
-  pull_request:
-    branches: [ main ]   # Only PR to main
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Deploy from main only"
+        required: true
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  call-ci:
+    uses: ./.github/workflows/ci-flow.yml   # ✅ include CI
+
   deploy_dev:
     runs-on: self-hosted
-    needs: [ build, cucumber]   # ✅ Only cucumber is mandatory ❌ newman is optional
+    needs: ci
     if: github.ref == 'refs/heads/main'  # Only main branch
     steps:
       - uses: actions/checkout@v4
